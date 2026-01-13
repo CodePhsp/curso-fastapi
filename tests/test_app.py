@@ -67,3 +67,48 @@ def test_root_deve_excluir_usuario(client):
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'message': 'User deleted'}
+
+
+# ATIVIDADE_03 - CAMINHO DO ERRO (raise HTTPException)
+#                NOVO ENDPOIT PARA BUSCAR UM ÚNICO REGISTRO
+def test_root_atualizar_usuario_caso_nao_encontrado(client):
+
+    response = client.put(
+        '/users/999',
+        json={
+            'username': 'bob',
+            'email': 'bob@gmail.com',
+            'password': 'oemail.@gmail.com',
+        },
+    )
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json() == {'detail': 'User not found'}
+
+
+def test_root_excluir_usuario_caso_nao_encontrado(client):
+
+    response = client.delete('/users/999')
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json() == {'detail': 'User not found'}
+
+
+# EMBORA NO SWAGGER UI TENHA DADO CERTO, NÃO FOI POSSÍVEL REALIZAR O TESTE COM ÊXITO
+def test_root_deve_buscar_um_unico_usuario(client):
+
+    response = client.get('/users/1')
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {
+        'username': 'Pedro',
+        'email': 'pedro@gmail.com',
+        'id': 1,
+    }
+
+
+def test_root_buscar_unico_usuario_caso_nao_encontrado(client):
+
+    response = client.get('/users/999')
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json() == {'detail': 'User not found'}
