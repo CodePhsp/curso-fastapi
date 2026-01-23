@@ -25,6 +25,20 @@ def test_root_deve_criar_usuario(client):
     }
 
 
+# NÃO FOI POSSÍVEL REALIZAR ESSE TESTE COM ÊXITO
+def test_root_deve_buscar_um_unico_usuario(client):
+
+    response = client.get('/users/1')
+
+    assert response.status_code == HTTPStatus.OK
+
+    assert response.json() == {
+        'username': 'Pedro',
+        'email': 'pedro@gmail.com',
+        'id': 1,
+    }
+
+
 def test_root_deve_retornar_usuarios(client):
 
     response = client.get(
@@ -91,20 +105,6 @@ def test_root_excluir_usuario_caso_nao_encontrado(client):
 
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert response.json() == {'detail': 'User not found'}
-
-
-# EMBORA NO SWAGGER UI TENHA DADO CERTO, NÃO FOI POSSÍVEL REALIZAR O TESTE COM ÊXITO
-def test_root_deve_buscar_um_unico_usuario(client):
-
-    response = client.get('/users/1')
-
-    assert response.status_code == HTTPStatus.OK
-    assert response.json() == {
-        'username': 'Pedro',
-        'email': 'pedro@gmail.com',
-        'id': 1,
-    }
-
 
 def test_root_buscar_unico_usuario_caso_nao_encontrado(client):
 
