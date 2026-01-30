@@ -10,7 +10,7 @@ from curso_fastapi.schemas import (
     UserSchema,
 )
 
-app = FastAPI()
+app = FastAPI(title='Curso FastAPI')
 
 
 @app.get('/', status_code=HTTPStatus.OK, response_model=Message)
