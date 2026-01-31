@@ -13,4 +13,4 @@ class Settings(BaseSettings):
     )
 
     # Será preenchida com o valor encontrado com o mesmo nome no arquivo .env
-    DATABSE_URL: str
+    DATABASE_URL: str
