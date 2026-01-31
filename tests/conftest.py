@@ -56,6 +56,8 @@ def _mock_db_time(*, model, time=datetime(2026,1,1)):
     def fake_time_hook(mapper, connection, target):
         if hasattr(target, 'created_at'):
             target.created_at = time
+        if hasattr(target, 'updated_at'):
+            target.updated_at = time
     
     # add um evento a um model que será passado a função
     # o hook será executado 'antes da inserção' do evento
@@ -65,7 +67,7 @@ def _mock_db_time(*, model, time=datetime(2026,1,1)):
 
     # remoção do hook após o final do gerenciamento de contexto
     event.remove(model, 'before_insert', fake_time_hook)
-
+    
 
 @pytest.fixture
 def mock_db_time():
