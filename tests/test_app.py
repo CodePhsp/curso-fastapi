@@ -1,5 +1,7 @@
 from http import HTTPStatus
 
+from curso_fastapi.schemas import UserPublic
+
 
 def test_root_deve_retornar_ok_e_ola_mundo(client):
 
@@ -25,13 +27,31 @@ def test_root_deve_criar_usuario(client):
     }
 
 
-# NÃO FOI POSSÍVEL REALIZAR ESSE TESTE COM ÊXITO
-def test_root_deve_buscar_um_unico_usuario(client):
-
-    response = client.get('/users/1')
-
+def test_root_deve_retornar_todos_usuarios(client):
+    response = client.get('/users')
     assert response.status_code == HTTPStatus.OK
+    assert response.json() == {'users': []}
 
+
+def test_busca_usuarios_com_usuarios(client, user):
+    user_schema = UserPublic.model_validate(user).model_dump()
+
+    response = client.get('/users/')
+
+    assert response.json() == {'users': [user_schema]}
+
+
+def test_root_deve_atualizar_usuario(client, user):
+
+    response = client.put(
+        '/users/1',
+        json={
+            'username': 'Pedro',
+            'email': 'pedro@gmail.com',
+            'password': '123456',
+        },
+    )
+    assert response.status_code == HTTPStatus.OK
     assert response.json() == {
         'username': 'Pedro',
         'email': 'pedro@gmail.com',
@@ -39,43 +59,33 @@ def test_root_deve_buscar_um_unico_usuario(client):
     }
 
 
-def test_root_deve_retornar_usuarios(client):
+def test_root_erro_de_integridade_ao_atualizar_usuario(client, user):
 
-    response = client.get(
-        '/users/',
-    )
-
-    assert response.status_code == HTTPStatus.OK
-    assert response.json() == {
-        'users': [
-            {
-                'username': 'Pedro',
-                'email': 'pedro@gmail.com',
-                'id': 1,
-            }
-        ]
-    }
-
-
-def test_root_deve_atualizar_usuario(client):
-
-    response = client.put(
-        '/users/1',
+    client.post(
+        '/users',
         json={
-            'username': 'Henrique',
-            'email': 'henrique@gmail.com',
-            'password': '2154896',
+            'username': 'Pedro',
+            'email': 'pedro@gmail.com',
+            'password': '123456',
         },
     )
-    assert response.status_code == HTTPStatus.OK
-    assert response.json() == {
-        'username': 'Henrique',
-        'email': 'henrique@gmail.com',
-        'id': 1,
+
+    response_update = client.put(
+        f'/users/{user.id}',
+        json={
+            'username': 'Pedro',
+            'email': 'pedro.henrique@test.com',
+            'password': 'secretpass',
+        },
+    )
+
+    assert response_update.status_code == HTTPStatus.CONFLICT
+    assert response_update.json() == {
+        'detail': 'Username or email already exists.'
     }
 
 
-def test_root_deve_excluir_usuario(client):
+def test_root_deve_excluir_usuario(client, user):
 
     response = client.delete('/users/1')
 
@@ -99,6 +109,20 @@ def test_root_atualizar_usuario_caso_nao_encontrado(client):
     assert response.json() == {'detail': 'User not found'}
 
 
+# NÃO FOI POSSÍVEL REALIZAR ESSE TESTE COM ÊXITO
+def test_root_deve_buscar_um_unico_usuario(client):
+
+    response = client.get('/users/1')
+
+    assert response.status_code == HTTPStatus.OK
+
+    assert response.json() == {
+        'username': 'Pedro',
+        'email': 'pedro@gmail.com',
+        'id': 1,
+    }
+
+
 def test_root_excluir_usuario_caso_nao_encontrado(client):
 
     response = client.delete('/users/999')
@@ -106,9 +130,11 @@ def test_root_excluir_usuario_caso_nao_encontrado(client):
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert response.json() == {'detail': 'User not found'}
 
+
 def test_root_buscar_unico_usuario_caso_nao_encontrado(client):
 
     response = client.get('/users/999')
 
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert response.json() == {'detail': 'User not found'}
+    
