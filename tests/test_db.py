@@ -11,7 +11,7 @@ def test_create_user(session, mock_db_time):
 
     with mock_db_time(model=User) as time:
         new_user = User(
-            username='Pedro', password='123', email='test@gmail.com'
+            username='Pedro', password='123', email='test@test.com'
         )
         session.add(new_user)
         session.commit()
@@ -21,8 +21,8 @@ def test_create_user(session, mock_db_time):
     assert asdict(user) == {
         'id': 1,
         'username': 'Pedro',
-        'password': 'secret',
-        'email': 'teste@test',
+        'password': '123',
+        'email': 'test@test.com',
         'created_at': time,
         'updated_at': time,
     }

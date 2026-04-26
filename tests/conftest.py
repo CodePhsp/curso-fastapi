@@ -2,7 +2,7 @@ from contextlib import contextmanager
 from datetime import datetime
 
 import pytest
-# from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
@@ -10,31 +10,52 @@ from sqlalchemy.pool import StaticPool
 from curso_fastapi.app import app
 from curso_fastapi.database import get_session
 from curso_fastapi.models import User, table_registry
+from curso_fastapi.security import get_password_hash
+
+
+@pytest.fixture
+def token(client, user):
+    response = client.post(
+        '/token',
+        data={
+            'username': user.email,
+            'password': user.clean_password,
+        },
+    )
+
+    return response.json()['access_token']
 
 
 @pytest.fixture
 def user(session):
-    user = User(username='Teste', email='teste@test.com', password='mypass')
+    password = 'mypass'
+    user = User(
+        username='Teste',
+        email='teste@test.com',
+        password=get_password_hash('mypass'),
+    )
     session.add(user)
     session.commit()
     session.refresh(user)
 
+    user.clean_password = password  # pyright: ignore[reportAttributeAccessIssue]
+
     return user
 
 
-# @pytest.fixture
-# def client(session):
-#     def get_session_override():
-#         return session
+@pytest.fixture
+def client(session):
+    def get_session_override():
+        return session
 
-#     with TestClient(app) as client:
-#         # Substitui a função get_session que usamos para a aplicação
-#         # real, pela nossa função que retorna a fixture de testes.
-#         app.dependency_overrides[get_session] = get_session_override
-#         yield client
+    with TestClient(app) as client:
+        # Substitui a função get_session que usamos para a aplicação
+        # real, pela nossa função que retorna a fixture de testes.
+        app.dependency_overrides[get_session] = get_session_override
+        yield client
 
-#     # Limpa a sobrescrita que fizemos no app para usar a fixture de session.
-#     app.dependency_overrides.clear()
+    # Limpa a sobrescrita que fizemos no app para usar a fixture de session.
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
