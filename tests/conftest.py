@@ -10,13 +10,18 @@ from sqlalchemy.pool import StaticPool
 from curso_fastapi.app import app
 from curso_fastapi.database import get_session
 from curso_fastapi.models import User, table_registry
-from curso_fastapi.security import get_password_hash
+from curso_fastapi.security import Settings, get_password_hash
+
+
+@pytest.fixture
+def settings():
+    return Settings()
 
 
 @pytest.fixture
 def token(client, user):
     response = client.post(
-        '/token',
+        '/auth/token',
         data={
             'username': user.email,
             'password': user.clean_password,

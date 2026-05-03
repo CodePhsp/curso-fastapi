@@ -1,169 +1,21 @@
 from http import HTTPStatus
 
-from fastapi import Depends, FastAPI, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from fastapi import FastAPI
 
-from curso_fastapi.database import get_session
-from curso_fastapi.models import User
-from curso_fastapi.schemas import (
-    Message,
-    Token,
-    UserList,
-    UserPublic,
-    UserSchema,
-    UserUnique,
-)
-from curso_fastapi.security import (
-    create_access_token,
-    get_current_user,
-    get_password_hash,
-    verify_password,
-)
+from curso_fastapi.routers import auth, users
+from curso_fastapi.schemas import Message
 
 app = FastAPI(
     title='Curso FastAPI',
     description='Curso administrado por Eduardo Mendes.',
-    version='0.1',
+    version='0.2',
 )
+
+
+app.include_router(auth.router)
+app.include_router(users.router)
 
 
 @app.get('/', status_code=HTTPStatus.OK, response_model=Message)
 def read_root():
     return {'message': 'Curso fastAPI'}
-
-
-@app.post('/users/', status_code=HTTPStatus.CREATED, response_model=UserPublic)
-# session: Session = Depends(get_session) diz que a função get_session
-# será executada antes da execução da função
-# e o valor retornado por get_session
-# será atribuído ao parâmetro session.
-def create_user(user: UserSchema, session: Session = Depends(get_session)):
-    db_user = session.scalar(
-        select(User).where(
-            (User.username == user.username) | (User.email == user.email)
-        )
-    )
-
-    if db_user:
-        if db_user.username == user.username:
-            raise HTTPException(
-                status_code=HTTPStatus.CONFLICT,
-                detail='Username already exists',
-            )
-        elif db_user.email == user.email:
-            raise HTTPException(
-                status_code=HTTPStatus.CONFLICT,
-                detail='Email already exists',
-            )
-    db_user = User(
-        username=user.username,
-        password=get_password_hash(user.password),
-        email=user.email,
-    )
-    session.add(db_user)
-    session.commit()
-    session.refresh(db_user)
-
-    return db_user
-
-
-@app.post('/token', response_model=Token)
-def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    session: Session = Depends(get_session),
-):
-
-    user = session.scalar(select(User).where(User.email == form_data.username))
-
-    if not user:
-        raise HTTPException(
-            # 401 - UNAUTHORIZED
-            status_code=HTTPStatus.UNAUTHORIZED,
-            detail='Incorrect email or password',
-        )
-
-    if not verify_password(form_data.password, user.password):
-        raise HTTPException(
-            status_code=HTTPStatus.UNAUTHORIZED,
-            detail='Incorrect email or password',
-        )
-
-    access_token = create_access_token(data={'sub': user.email})
-
-    return {'access_token': access_token, 'token_type': 'bearer'}
-
-
-@app.get('/users/', status_code=HTTPStatus.OK, response_model=UserList)
-def read_users(
-    # offset: permite pular um número específico de registros antes
-    # de começar a buscar
-    # limit: define o número máximo de registros a serem retornados
-    skip: int = 0,
-    limit: int = 100,
-    session: Session = Depends(get_session),
-):
-    users = session.scalars(select(User).offset(skip).limit(limit)).all()
-    return {'users': users}
-
-
-@app.put('/users/{user_id}', response_model=UserPublic)
-def update_user(
-    user_id: int,
-    user: UserSchema,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
-):
-    if current_user.id != user_id:
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN, detail='Not enough permissions'
-        )
-
-    try:
-        current_user.username = user.username
-        current_user.password = get_password_hash(user.password)
-        current_user.email = user.email
-        session.commit()
-        session.refresh(current_user)
-
-        return current_user
-
-    # status code: 409
-    except IntegrityError:
-        raise HTTPException(
-            status_code=HTTPStatus.CONFLICT,
-            detail='Username or email already exists.',
-        )
-
-
-@app.delete('/users/{user_id}', response_model=Message)
-def delete_user(
-    user_id: int,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
-):
-
-    if current_user.id != user_id:
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN, detail='Not enough permissions'
-        )
-
-    session.delete(current_user)
-    session.commit()
-
-    return {'message': 'User deleted'}
-
-
-@app.get('/users/{user_id}', response_model=UserUnique)
-def search_unique_user(user_id: int, session: Session = Depends(get_session)):
-
-    user = session.scalar(select(User).where(User.id == user_id))
-
-    if not user:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail='User not found'
-        )
-
-    return {'user': user}
